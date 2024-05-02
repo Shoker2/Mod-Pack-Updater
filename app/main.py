@@ -164,6 +164,7 @@ class UpdateWindow(Ui_Update):
 		super().__init__()
 
 		self.resize(int(config.read('Windows', 'main_x')), int(config.read('Windows', 'main_y')))
+		self.progressBar.hide()
 
 		try:
 			response = requests.post(config.read('General', 'server'))
@@ -178,29 +179,34 @@ class UpdateWindow(Ui_Update):
 		self.actionMods.triggered.connect(self.activate_mods_window_show)
 
 	def updateButtonClicked(self):
+		path = os.path.normpath((config.read('General', 'mods_folder')))
+
 		if (self.thread_downloader == None):
-			modpack_name = self.modpacksComboBox.currentText()
-			if modpack_name != '':
-				try:
-					path = os.path.normpath((config.read('General', 'mods_folder')))
+			if path != '.':
+				modpack_name = self.modpacksComboBox.currentText()
+				if (modpack_name != ''):
+					try:
+						if not(os.path.exists(path)):
+							os.mkdir(path)
 
-					if not(os.path.exists(path)):
-						os.mkdir(path)
+						zip_path = path + '\\_ts2temp.zip'
+			
+						self.thread_downloader = QtCore.QThread()
+						self.downloader = Downloader(self.modpacks[modpack_name], path, zip_path)
 
-					zip_path = path + '\\_ts2temp.zip'
-		
-					self.thread_downloader = QtCore.QThread()
-					self.downloader = Downloader(self.modpacks[modpack_name], path, zip_path)
+						self.downloader.moveToThread(self.thread_downloader)
 
-					self.downloader.moveToThread(self.thread_downloader)
+						self.thread_downloader.started.connect(self.downloader.start)
+						self.downloader.endSignal.connect(self.progressBarEnabling)
 
-					self.thread_downloader.started.connect(self.downloader.start)
-					self.downloader.endSignal.connect(self.progressBarEnabling)
+						self.thread_downloader.start()
 
-					self.thread_downloader.start()
-
-				except FileNotFoundError:
-					message_box("Указанный путь не найден", "Проверьте правильность пути или попробуйте указать новый. Желательно, чтобы символы были только из английского алфавита")
+					except FileNotFoundError:
+						message_box("Указанный путь не найден", "Проверьте правильность пути или попробуйте указать новый. Желательно, чтобы символы были только из английского алфавита")
+				else:
+					message_box("Не выбрана сборка модов", "")
+			else:
+				message_box("Выберите папку", "Сперва выберите папку, для установки модов: Файл -> Настройки -> Выбрать")
 
 	def progressBarEnabling(self, value: bool):
 		if value:
@@ -210,8 +216,10 @@ class UpdateWindow(Ui_Update):
 			self.thread_downloader.wait()
 
 			self.thread_downloader = None
+			self.updateButton.show()
 		else:
 			self.progressBar.show()
+			self.updateButton.hide()
 
 	def activate_mods_window_show(self):
 		activate_mods_window.refreshList(config.read('General', 'mods_folder'))

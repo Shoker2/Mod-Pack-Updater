@@ -9,7 +9,7 @@ class Configure:
 
 	config_windows = {
 			'main_x': '520',
-			'main_y': '140',
+			'main_y': '110',
 			'settings_x': '500',
 			'settings_y': '100'
 		}
