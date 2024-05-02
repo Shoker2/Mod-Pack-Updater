@@ -158,6 +158,7 @@ class Downloader(QtCore.QObject):
 
 class UpdateWindow(Ui_Update):
 	modpacks = {}
+	thread_downloader = None
 
 	def __init__(self) -> None:
 		super().__init__()
@@ -177,33 +178,38 @@ class UpdateWindow(Ui_Update):
 		self.actionMods.triggered.connect(self.activate_mods_window_show)
 
 	def updateButtonClicked(self):
-		modpack_name = self.modpacksComboBox.currentText()
-		if modpack_name != '':
-			try:
-				path = os.path.normpath((config.read('General', 'mods_folder')))
+		if (self.thread_downloader == None):
+			modpack_name = self.modpacksComboBox.currentText()
+			if modpack_name != '':
+				try:
+					path = os.path.normpath((config.read('General', 'mods_folder')))
 
-				if not(os.path.exists(path)):
-					os.mkdir(path)
+					if not(os.path.exists(path)):
+						os.mkdir(path)
 
-				zip_path = path + '\\_ts2temp.zip'
+					zip_path = path + '\\_ts2temp.zip'
+		
+					self.thread_downloader = QtCore.QThread()
+					self.downloader = Downloader(self.modpacks[modpack_name], path, zip_path)
 
-				self.thread_downloader = QtCore.QThread()
-				self.downloader = Downloader(self.modpacks[modpack_name], path, zip_path)
+					self.downloader.moveToThread(self.thread_downloader)
 
-				self.downloader.moveToThread(self.thread_downloader)
+					self.thread_downloader.started.connect(self.downloader.start)
+					self.downloader.endSignal.connect(self.progressBarEnabling)
 
-				self.thread_downloader.started.connect(self.downloader.start)
-				self.downloader.endSignal.connect(self.progressBarEnabling)
+					self.thread_downloader.start()
 
-				self.thread_downloader.start()
-
-			except FileNotFoundError:
-				message_box("Указанный путь не найден", "Проверьте правильность пути или попробуйте указать новый. Желательно, чтобы символы были только из английского алфавита")
+				except FileNotFoundError:
+					message_box("Указанный путь не найден", "Проверьте правильность пути или попробуйте указать новый. Желательно, чтобы символы были только из английского алфавита")
 
 	def progressBarEnabling(self, value: bool):
 		if value:
 			self.progressBar.hide()
+
 			self.thread_downloader.quit()
+			self.thread_downloader.wait()
+
+			self.thread_downloader = None
 		else:
 			self.progressBar.show()
 
