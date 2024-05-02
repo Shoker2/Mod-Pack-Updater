@@ -19,7 +19,23 @@ class Ui_Update(QMainWindow):
         super().__init__()
 
         self.setObjectName("Update")
-        self.resize(500, 150)
+        self.resize(500, 177)
+
+        self.menubar = QtWidgets.QMenuBar(self)
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 800, 26))
+        self.menubar.setObjectName("menubar")
+        self.menuFile = QtWidgets.QMenu(self.menubar)
+        self.menuFile.setObjectName("menuFile")
+        self.setMenuBar(self.menubar)
+
+        self.actionSettings = QtWidgets.QAction(self)
+        self.actionSettings.setObjectName("actionSettings")
+        self.actionMods = QtWidgets.QAction(self)
+        self.actionMods.setObjectName("action")
+        self.menuFile.addAction(self.actionSettings)
+        self.menuFile.addAction(self.actionMods)
+        self.menubar.addAction(self.menuFile.menuAction())
+
         self.GeneralScrollArea = QtWidgets.QScrollArea(self)
         self.GeneralScrollArea.setGeometry(QtCore.QRect(10, 10, 531, 261))
         self.GeneralScrollArea.setWidgetResizable(True)
@@ -38,12 +54,6 @@ class Ui_Update(QMainWindow):
         self.horizontalLayout.setSizeConstraint(QtWidgets.QLayout.SetNoConstraint)
         self.horizontalLayout.setSpacing(2)
         self.horizontalLayout.setObjectName("horizontalLayout")
-        self.folderEdit = QtWidgets.QLineEdit(self.scrollAreaWidgetContents)
-        self.folderEdit.setObjectName("folderEdit")
-        self.horizontalLayout.addWidget(self.folderEdit)
-        self.selcetFolderButton = QtWidgets.QPushButton(self.scrollAreaWidgetContents)
-        self.selcetFolderButton.setObjectName("selcetFolderButton")
-        self.horizontalLayout.addWidget(self.selcetFolderButton)
         self.verticalLayout_2.addLayout(self.horizontalLayout)
         self.updateButton = QtWidgets.QPushButton(self.scrollAreaWidgetContents)
         font = QtGui.QFont()
@@ -60,36 +70,24 @@ class Ui_Update(QMainWindow):
 
         self.setWindowTitle("Обновление сборки")
         self.updateButton.setText("Обновить")
-        self.selcetFolderButton.setText("Выбрать")
-        self.folderEdit.setToolTip("Папка с модами")
+
+        self.menuFile.setTitle("Файл")
+        self.actionSettings.setText("Настройки")
+        self.actionMods.setText("Активация модов")
 
         self.progressBar.setTextVisible(False)
     
         self.progressBarSignal.connect(self.progressBarSignalEvent)
-        self.selcetFolderButton.clicked.connect(self.selectFolderButtonClicked)
         self.updateButton.clicked.connect(self.updateButtonClicked)
-        self.folderEdit.textChanged.connect(self.folderEditEvent)
 
         self.progressBarSignal.emit(0)
     
     def resizeEvent(self, event):
-        self.GeneralScrollArea.setGeometry(0, 0, self.size().width(), self.size().height())
+        self.GeneralScrollArea.setGeometry(0, 25, self.size().width(), self.size().height() - 25)
         return super().resizeEvent(event)
     
     def progressBarSignalEvent(self, value):
         self.progressBar.setValue(value)
-
-    def selectFolder(self):
-        way = QtWidgets.QFileDialog.getExistingDirectory(self, 'Выбрать папку')
-        return way
-    
-    def selectFolderButtonClicked(self):
-        way = self.selectFolder()
-        if way != "":
-            self.folderEdit.setText(way)
-
-    def folderEditEvent(self):
-        print(self.folderEdit.text())
     
     def updateButtonClicked(self):
         pass

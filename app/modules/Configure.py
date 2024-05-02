@@ -8,8 +8,10 @@ class Configure:
 			}
 
 	config_windows = {
-			'Settings_x': '520',
-			'Settings_y': '150'
+			'main_x': '520',
+			'main_y': '140',
+			'settings_x': '500',
+			'settings_y': '100'
 		}
 	
 	def __init__(self, config_path, create=True):

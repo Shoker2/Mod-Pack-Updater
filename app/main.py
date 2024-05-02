@@ -8,6 +8,7 @@ import sys
 from modules.Configure import Configure
 from modules.FilesListConfig import FileListCinfig
 from modules.update_window import Ui_Update
+from modules.settings_window import UI_Settings
 
 def download_file(url: str, path: str):
 	try:
@@ -147,12 +148,7 @@ class UpdateWindow(Ui_Update):
 	def __init__(self) -> None:
 		super().__init__()
 
-		if config.read('General', 'mods_folder') != '':
-			self.folderEdit.setText(os.path.normpath(config.read('General', 'mods_folder')))
-		else:
-			self.folderEdit.setText(os.environ['APPDATA'] + '\\.minecraft\\mods')
-
-		self.resize(int(config.read('Windows', 'settings_x')), int(config.read('Windows', 'settings_y')))
+		self.resize(int(config.read('Windows', 'main_x')), int(config.read('Windows', 'main_y')))
 
 		try:
 			response = requests.post(config.read('General', 'server'))
@@ -162,15 +158,14 @@ class UpdateWindow(Ui_Update):
 		for modpack_name in response.json():
 			self.modpacks[modpack_name] = response.json()[modpack_name]
 			self.modpacksComboBox.addItem(modpack_name)
-	
-	def folderEditEvent(self):
-		config.update('General', 'mods_folder', self.folderEdit.text())
+
+		self.actionSettings.triggered.connect(settings_win.show)
 
 	def updateButtonClicked(self):
 		modpack_name = self.modpacksComboBox.currentText()
 		if modpack_name != '':
 			try:
-				path = os.path.normpath(self.folderEdit.text())
+				path = os.path.normpath((config.read('General', 'mods_folder')))
 
 				if not(os.path.exists(path)):
 					os.mkdir(path)
@@ -199,6 +194,29 @@ class UpdateWindow(Ui_Update):
 		
 	def resizeEvent(self, event):
 		super().resizeEvent(event)
+		config.update('Windows', 'main_x', str(self.size().width()))
+		config.update('Windows', 'main_y', str(self.size().height()))
+
+class SettingsWindow(UI_Settings):
+	def __init__(self):
+		super().__init__()
+
+		self.resize(int(config.read('Windows', 'settings_x')), int(config.read('Windows', 'settings_y')))
+
+		if config.read('General', 'mods_folder') != '':
+			self.folderEdit.setText(os.path.normpath(config.read('General', 'mods_folder')))
+		
+		if config.read('General', 'server') != '':
+			self.serverEdit.setText(config.read('General', 'server'))
+	
+	def folderEditEvent(self):
+		config.update('General', 'mods_folder', self.folderEdit.text())
+	
+	def serverEditEvent(self):
+		config.update('General', 'server', self.serverEdit.text())
+	
+	def resizeEvent(self, event):
+		super().resizeEvent(event)
 		config.update('Windows', 'settings_x', str(self.size().width()))
 		config.update('Windows', 'settings_y', str(self.size().height()))
 
@@ -211,7 +229,9 @@ if __name__ == '__main__':
 	
 	app = QtWidgets.QApplication(sys.argv)
 
+	settings_win = SettingsWindow()
 	window = UpdateWindow()
+
 	window.show()
 
 	sys.exit(app.exec_())
