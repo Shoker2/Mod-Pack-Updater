@@ -11,7 +11,6 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QMainWindow
 
-
 class Ui_Update(QMainWindow):
     progressBarSignal = QtCore.pyqtSignal(int)
 

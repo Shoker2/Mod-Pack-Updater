@@ -9,6 +9,7 @@ from modules.Configure import Configure
 from modules.FilesListConfig import FileListCinfig
 from modules.update_window import Ui_Update
 from modules.settings_window import UI_Settings
+from modules.activate_mods_wndow import Ui_ActivateMods
 
 def download_file(url: str, path: str):
 	try:
@@ -50,7 +51,20 @@ def remove_files(path: str, files: list):
 			
 			if (not(father_dir in dirs)):
 				dirs.append(father_dir)
+		
+		if os.path.exists(file_path + ".ds"):
+			file_path = file_path + ".ds"
 
+			if os.path.isfile(file_path):
+				os.remove(file_path)
+			elif os.path.isdir(file_path) and not(file_path in dirs):
+				dirs.append(file_path)
+				continue
+			
+			father_dir = '\\'.join(file_path.split('\\')[0:-1])
+			
+			if (not(father_dir in dirs)):
+				dirs.append(father_dir)
 		try:
 			window.progressBarSignal.emit(int( (filesI / (len(files) - len(dirs))) * 10 ))
 		except ZeroDivisionError:
@@ -160,6 +174,7 @@ class UpdateWindow(Ui_Update):
 			self.modpacksComboBox.addItem(modpack_name)
 
 		self.actionSettings.triggered.connect(settings_win.show)
+		self.actionMods.triggered.connect(self.activate_mods_window_show)
 
 	def updateButtonClicked(self):
 		modpack_name = self.modpacksComboBox.currentText()
@@ -191,7 +206,11 @@ class UpdateWindow(Ui_Update):
 			self.thread_downloader.quit()
 		else:
 			self.progressBar.show()
-		
+
+	def activate_mods_window_show(self):
+		activate_mods_window.refreshList(config.read('General', 'mods_folder'))
+		activate_mods_window.show()
+
 	def resizeEvent(self, event):
 		super().resizeEvent(event)
 		config.update('Windows', 'main_x', str(self.size().width()))
@@ -220,6 +239,44 @@ class SettingsWindow(UI_Settings):
 		config.update('Windows', 'settings_x', str(self.size().width()))
 		config.update('Windows', 'settings_y', str(self.size().height()))
 
+class ActivateModsWindow(Ui_ActivateMods):
+	path: str
+
+	def get_file_path(self, item):
+		return os.path.normpath(self.path + "\\" + item)
+
+	def refreshList(self, path: str):
+		self.path = os.path.normpath(path)
+		file_list_config = FileListCinfig(self.path + '\\TS2FilesListConfig.ini')
+		self.listWidget.clear()
+
+		for item in file_list_config.read('files'):
+			file_path = self.get_file_path(item)
+			# print(file_path)
+
+			if os.path.exists(file_path):
+				self.listWidget.addItem(item, True)
+			elif os.path.exists(file_path + ".ds"):
+				self.listWidget.addItem(item, False)
+			else:
+				self.listWidget.addItem("Отсутствует: " + item, None)
+	
+	def checkstateChanged(self, index, status):
+		file_path = self.get_file_path(self.listWidget.item(index).text())
+		
+		if status == QtCore.Qt.CheckState.Checked:
+			if os.path.exists(file_path + ".ds") and os.path.exists(file_path):
+				os.remove(file_path)
+				os.rename(file_path + ".ds", file_path)
+			elif os.path.exists(file_path + ".ds"):
+				os.rename(file_path + ".ds", file_path)
+		elif status == QtCore.Qt.CheckState.Unchecked:
+			if os.path.exists(file_path) and os.path.exists(file_path + ".ds"):
+				os.remove(file_path + ".ds")
+				os.rename(file_path, file_path + ".ds")
+			elif os.path.exists(file_path):
+				os.rename(file_path, file_path + ".ds")
+
 if __name__ == '__main__':
 	directory = os.getcwd()
 	
@@ -230,6 +287,7 @@ if __name__ == '__main__':
 	app = QtWidgets.QApplication(sys.argv)
 
 	settings_win = SettingsWindow()
+	activate_mods_window = ActivateModsWindow()
 	window = UpdateWindow()
 
 	window.show()
