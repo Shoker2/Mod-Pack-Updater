@@ -5,9 +5,9 @@ import zipfile
 import os
 import sys
 
-from Configure import Configure
-from FilesListConfig import FileListCinfig
-from update_window import Ui_Update
+from modules.Configure import Configure
+from modules.FilesListConfig import FileListCinfig
+from modules.update_window import Ui_Update
 
 def download_file(url: str, path: str):
 	try:
