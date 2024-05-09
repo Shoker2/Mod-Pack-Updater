@@ -4,6 +4,7 @@ import requests
 import zipfile
 import os
 import sys
+import codecs
 
 from modules.Configure import Configure
 from modules.FilesListConfig import FileListCinfig
@@ -106,6 +107,8 @@ def message_box(title, text, action=None, action_arg=()):
 		action(action_arg)
 
 class ZipFileCustom(zipfile.ZipFile):
+	file_list_config: FileListCinfig
+
 	""" Custom ZipFile class with a callback on extractall. """
 	def extractall(self, path=None, members=None, pwd=None, fn_progress=None):
 		if members is None:
@@ -114,10 +117,41 @@ class ZipFileCustom(zipfile.ZipFile):
 			path = os.getcwd()
 		else:
 			path = os.fspath(path)
+		
+		for i in self.file_list_config.read('donotreplace'):
+			i = str(i).replace("\\", "/")
+			path_ = os.path.normpath(path + "\\" + i)
+
+			if os.path.isdir(path_):
+				for root, _, files in os.walk(path_, topdown=False):
+					root = root[len(path) + 1::]
+					for file in files:
+						file_path = os.path.normpath(root + "\\" + file).replace("\\", "/")
+						if file_path in members:
+							members.remove(file_path)
+			else:
+				if i in members:
+					members.remove(i)
+
+		if ".donotreplace" in members:
+			with self.open(".donotreplace", 'r', pwd) as readFile:
+				donotreplace = []
+				self.file_list_config.update('donotreplace', [])
+
+				for line in codecs.iterdecode(readFile, 'utf8'):
+					line = os.path.normpath(line.strip())
+					donotreplace.append(line)
+
+				self.file_list_config.update('donotreplace', donotreplace)
+
+			members.remove(".donotreplace")
+
 		for index, member in enumerate(members):
 			if fn_progress:
 				fn_progress(len(members), index + 1)
 			self._extract_member(member, path, pwd)
+		
+		return self.file_list_config
 	
 	def getFilesList(self):
 		return self.namelist()
@@ -149,9 +183,30 @@ class Downloader(QtCore.QObject):
 		download_file(self.url, self.zip_path)
 
 		with ZipFileCustom(self.zip_path, 'r') as zip_ref:
-			file_list_config.update('files', zip_ref.getFilesList())
-			zip_ref.extractall(self.path, fn_progress=lambda total, current: window.progressBarSignal.emit(90 + self.calculate_percentage_zip(total, current)))
+			zip_ref.file_list_config = file_list_config
+			newfiles = []
+
+			for i in zip_ref.getFilesList():
+				if i != ".donotreplace":
+					newfiles.append(os.path.normpath(i))
+			
+			file_list_config = zip_ref.extractall(self.path, fn_progress=lambda total, current: window.progressBarSignal.emit(90 + self.calculate_percentage_zip(total, current)))
 		
+		for i in file_list_config.read('donotreplace'):
+			path = self.path + "\\" + i
+			if os.path.isdir(path):
+				for root, _, files in os.walk(path, topdown=False):
+					root = root[len(self.path) + 1::]
+					for file in files:
+						file_path = os.path.normpath(root + "\\" + file)
+						if file_path in newfiles:
+							newfiles.remove(file_path)
+			else:
+				if i in newfiles:
+					newfiles.remove(i)
+
+		file_list_config.update('files', newfiles)
+
 		os.remove(self.zip_path)
 		window.progressBarSignal.emit(100)
 		self.endSignal.emit(1)
