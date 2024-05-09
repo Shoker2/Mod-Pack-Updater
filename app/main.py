@@ -188,6 +188,8 @@ class Downloader(QtCore.QObject):
 
 			for i in zip_ref.getFilesList():
 				if i != ".donotreplace":
+					if i[-3::] == ".ds":
+						i = i[:-3]
 					newfiles.append(os.path.normpath(i))
 			
 			file_list_config = zip_ref.extractall(self.path, fn_progress=lambda total, current: window.progressBarSignal.emit(90 + self.calculate_percentage_zip(total, current)))
